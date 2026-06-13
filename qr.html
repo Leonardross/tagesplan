@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tagesplan – Link teilen</title>
+<style>
+  body { background:#0e1014; color:#e8eaf0; font-family:"Segoe UI",sans-serif;
+         display:flex; flex-direction:column; align-items:center;
+         min-height:100vh; padding:0; margin:0; }
+  .hero { text-align:center; padding:32px 20px 16px; }
+  h1 { font-size:22px; font-weight:700; margin-bottom:6px; }
+  .sub { color:#8b92a5; font-size:14px; }
+  .qr-box { background:#fff; border-radius:16px; padding:14px; margin:14px 0 6px; }
+  .qr-box img { width:220px; height:220px; display:block; }
+  .url-box { background:#1d212b; border:1px solid #2a2f3a; border-radius:10px; padding:10px 16px; margin:6px 20px 20px; font-size:13px; color:#5b8cff; word-break:break-all; text-align:center; }
+  hr { width:100%; max-width:480px; border:none; border-top:1px solid #2a2f3a; margin:0; }
+  .section { width:100%; max-width:480px; padding:18px 24px; }
+  .section h2 { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#8b92a5; margin-bottom:12px; }
+  .step { display:flex; gap:12px; margin-bottom:14px; align-items:flex-start; }
+  .step-num { width:26px; height:26px; border-radius:50%; background:#5b8cff; color:#fff; font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+  .step-text { font-size:14px; line-height:1.5; }
+  .step-text b { color:#e8eaf0; }
+  .green { color:#3ecf8e; font-weight:600; }
+  .os-tabs { display:flex; border:1px solid #2a2f3a; border-radius:10px; overflow:hidden; margin-bottom:14px; }
+  .os-tab { flex:1; padding:10px; text-align:center; cursor:pointer; font-size:14px; background:#171a21; transition:background .15s; border:none; color:#e8eaf0; font-family:inherit; }
+  .os-tab.active { background:#5b8cff; font-weight:600; }
+  .os-content { display:none; }
+  .os-content.active { display:block; }
+  .note { background:#1d212b; border:1px solid #2a2f3a; border-radius:10px; padding:12px 14px; font-size:13px; color:#8b92a5; margin-top:10px; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Tagesplan teilen</h1>
+  <div class="sub">Funktioniert auf jedem Handy — kein Server nötig</div>
+</div>
+
+<div class="qr-box">
+  <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZoAAAGaAQAAAAAefbjOAAADK0lEQVR4nO1cUY6jMAy1AWk+QeoB5ijpDfZI1RxpbgBH6Q3gcyQqr+yYwPZrUbvN0rz3kQkBi9R5cmzHDAvtxlDtlyGCkAOKcEARDijCAUU4oAgHFHEkRbCj8d55YqaBGyLSnjZ+I8v0dgJCjyiiiX9Cr+10osXRFOIgN5bhl43Us43yA2+qIHQoRUzJACiGjki+1GSc6RZpYBYk2/R2AULPVATrhsGXa0MUxlpERh37F2/6K0Do5Ypo7geGz7kRmrR3rtV4dBQvH31TBaFDMaJVd0EXPvQkHPqZOIwd+w1zLHJMr4JQJkUMFkl02p0swjCm1ELh6s6EIdf09gFCj9sI2Q6ZK3ljGrrafMyNoXjkTRWEDqEIEgUFa0ZaLIMO9q2FnPXChtafk/4//00VhB5nBNnCtzOJJiacDK3d0zHt2Q0DGFEA94Kah3D9EL6ICF9GpYU6E5641CaajCzT2wcIPWPXGN1G+OZg+0faNWJmQmbCrlHYrkG2+moe7IbywLLbvqfAjyhHSGS8MQX5sbgirn7MVIboR/ywbSJOkEP8pp2A0H2sMftye9ThJmMTcNgj8CwLoZF8dR5z+rBFHUaG6UOWHEWKQw/xm3YCQvd+BEXHYRuH2v6xeJZxDDbi7WlEcZFF19y3jiWuSEYB+YgSY402JRu0p9zYRqRL1go2oqjoU/pEhk26MhkKu8SuUQ4jyBMQnohK3FCs1gLnGuWcdM3uSnq60g4ynCBWSOUNzjVKOQ2fTsJaWStDp1W2E5NQq+SY7DiciMN3hulVEMoVa4h5D+lcY73cPIIsdjmEZbYMldbbGobOjjS88W81umzT2wkIPcVGOPykK0WacSzdMKA+4p2511jLfrV+qNMQqx/BcWw6zVak/fLpVRDKVTEjij/Mg33Vs1RTpYRVnuntA4SeUjFDvuapZwRBnSWVzgiJNZVLdcxiHhJL4EcU900XWSpCMXA9a0/3j/ix1+unV0EolyJar7Z2o3C1ein9bqfT5tO9jGzT2wUIPelcg9Ziy1QfsdZZrnEoos+35h7jP5MdYp0qCEVAEQ4owgFFOKAIBxTheJ0ifgOJjXTU5Dk+ogAAAABJRU5ErkJggg==" alt="QR-Code">
+</div>
+<div class="url-box">leonardross.github.io/tagesplan/Tagesplan.html</div>
+
+<hr>
+<div class="section">
+  <h2>Als App installieren (offline)</h2>
+  <div class="os-tabs">
+    <button class="os-tab active" onclick="switchOS('ios')">🍎 iPhone</button>
+    <button class="os-tab" onclick="switchOS('android')">🤖 Android</button>
+  </div>
+
+  <div class="os-content active" id="os-ios">
+    <div class="step"><div class="step-num">1</div><div class="step-text">Link in <b>Safari</b> öffnen → unten auf <b>Teilen</b> tippen</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text"><b>„Zum Home-Bildschirm"</b> → Hinzufügen</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text"><span class="green">Fertig — läuft offline als App</span></div></div>
+  </div>
+
+  <div class="os-content" id="os-android">
+    <div class="step"><div class="step-num">1</div><div class="step-text">Link in <b>Chrome</b> öffnen → <b>⋮</b> → <b>Zum Startbildschirm</b></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text"><span class="green">Fertig — läuft offline als App</span></div></div>
+  </div>
+</div>
+
+<script>
+function switchOS(os) {
+  document.querySelectorAll('.os-tab').forEach((t,i) => t.classList.toggle('active', (os==='ios'&&i===0)||(os==='android'&&i===1)));
+  document.querySelectorAll('.os-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('os-'+os).classList.add('active');
+}
+</script>
+</body>
+</html>

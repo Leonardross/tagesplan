@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Tagesplan</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0e1014">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tagesplan">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --bg: #0e1014;
+    --card: #171a21;
+    --card2: #1d212b;
+    --border: #2a2f3a;
+    --text: #e8eaf0;
+    --muted: #8b92a5;
+    --accent: #5b8cff;
+    --accent2: #7c5bff;
+    --green: #3ecf8e;
+    --red: #ff5b6e;
+    --amber: #ffb74d;
+    --nav-h: 64px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    min-height: 100vh; padding-bottom: var(--nav-h);
+  }
+
+  /* ── Bottom Nav ── */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #13161e; border-top: 1px solid var(--border);
+    display: flex; z-index: 40; height: var(--nav-h);
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 3px; background: transparent; border: none;
+    border-radius: 0; color: var(--muted); font-size: 11px; cursor: pointer;
+    transition: color .15s; padding-bottom: 6px; font-family: inherit;
+  }
+  .nav-btn .ni { font-size: 22px; line-height: 1; display: block; }
+  .nav-btn.active { color: var(--accent); }
+
+  /* ── Tab visibility ── */
+  .tab-view { display: none; }
+  body[data-tab="home"]   .t-home   { display: block; }
+  body[data-tab="plan"]   .t-plan   { display: block; }
+  body[data-tab="habits"] .t-habits { display: block; }
+  body[data-tab="stats"]  .t-stats  { display: block; }
+
+  /* ── Shared ── */
+  .wrap { max-width: 760px; margin: 0 auto; padding: 14px 16px 20px; }
+  select, input, button, textarea {
+    font-family: inherit; font-size: 14px; color: var(--text);
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; outline: none;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+  button { cursor: pointer; transition: background .15s, border-color .15s; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover { background: #4a7af0; }
+  button.danger:hover { border-color: var(--red); color: var(--red); }
+  button.ghost { background: transparent; }
+  .section-head { display: flex; justify-content: space-between; align-items: center; margin: 0 2px 10px; }
+  .section-head h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 700; }
+  .hint { color: var(--muted); font-size: 12px; margin: 6px 2px; }
+  .empty-state { text-align: center; color: var(--muted); padding: 36px 10px; }
+  .empty-state .big { font-size: 36px; margin-bottom: 8px; }
+
+  /* ── Topbar (Plan & Habits tabs) ── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 14px 16px 0; flex-wrap: wrap;
+    max-width: 760px; margin: 0 auto;
+  }
+  .clock-sm { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .clock-sm small { font-size: 15px; color: var(--muted); }
+  .topbar-right { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+  /* ── Home Tab ── */
+  .app-clock { text-align: center; padding: 28px 16px 10px; }
+  .clock-big { font-size: 64px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .clock-date { color: var(--muted); font-size: 15px; margin-top: 6px; }
+
+  .home-now {
+    background: linear-gradient(135deg, #1b2030, #171a21);
+    border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px;
+  }
+  .home-now-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); font-weight: 700; margin-bottom: 6px; }
+  .home-now-title { font-size: 20px; font-weight: 700; }
+  .home-now-rem { color: var(--muted); font-size: 13px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+  .home-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .summary-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  .summary-card .sv { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .summary-card .sl { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  .home-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .home-feature-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 22px 14px; text-align: center; cursor: pointer;
+    transition: border-color .2s, transform .15s;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .home-feature-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .home-feature-card .hfc-icon { font-size: 36px; }
+  .home-feature-card .hfc-title { font-size: 16px; font-weight: 700; }
+  .home-feature-card .hfc-sub { font-size: 12px; color: var(--muted); }
+
+  /* ── Plan Tab: Jetzt-Karte ── */
+  .now-card {
+    background: linear-gradient(135deg, #1b2030 0%, #171a21 100%);
+    border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 12px;
+  }
+  .now-card.free { background: var(--card); }
+  .now-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); font-weight: 700; margin-bottom: 6px; }
+  .now-card.free .now-label { color: var(--muted); }
+  .now-title { font-size: 26px; font-weight: 700; margin-bottom: 4px; word-break: break-word; }
+  .now-time { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .now-note { color: var(--muted); font-size: 13px; margin-top: 6px; white-space: pre-wrap; }
+  .now-remaining { font-size: 14px; margin-top: 10px; }
+  .now-remaining b { font-variant-numeric: tabular-nums; }
+  .progress-outer { height: 7px; background: #262b36; border-radius: 4px; margin-top: 8px; overflow: hidden; }
+  .progress-inner { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width 1s linear; }
+
+  .next-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 12px;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .next-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 700; margin-bottom: 2px; }
+  .next-title-text { font-size: 15px; font-weight: 600; }
+  .next-in { color: var(--accent); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* ── Review Card ── */
+  .review-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 14px; overflow: hidden; }
+  .review-head { padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; font-weight: 600; font-size: 14px; }
+  .review-head:hover { background: var(--card2); }
+  .review-status { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .review-status.done { color: var(--green); }
+  .review-body { padding: 4px 16px 14px; border-top: 1px solid var(--border); }
+  .scale-label { font-size: 12px; color: var(--muted); margin: 10px 0 5px; }
+  .scale { display: flex; gap: 4px; flex-wrap: wrap; }
+  .scale button { width: 34px; height: 32px; padding: 0; font-size: 13px; border-radius: 7px; }
+  .scale button.sel { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  .scale.energy button.sel { background: var(--accent2); border-color: var(--accent2); }
+  .review-note-row { display: flex; gap: 8px; margin-top: 12px; }
+  .review-note-row input { flex: 1; }
+
+  /* ── Timeline ── */
+  .adherence { font-size: 12px; color: var(--muted); }
+  .adherence .ok { color: var(--green); }
+  .adherence .no { color: var(--red); }
+  .overlap-warn { color: var(--amber); font-size: 12px; margin: 3px 2px 6px; }
+  .timeline { display: flex; flex-direction: column; gap: 5px; }
+  .tl-block {
+    background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px;
+    display: flex; align-items: center; gap: 10px; transition: border-color .2s;
+  }
+  .tl-block.past { opacity: .45; }
+  .tl-block.active { border-color: var(--accent); background: #1b2030; box-shadow: 0 0 0 1px var(--accent); }
+  .tl-block.checked-done { border-color: rgba(62,207,142,.4); }
+  .tl-block .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .tl-block .times { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; width: 88px; flex-shrink: 0; }
+  .tl-block .b-title { font-weight: 600; font-size: 14px; flex: 1; word-break: break-word; }
+  .tl-block .b-note { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .tl-block .b-dur { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .tl-block .chk { width: 28px; height: 28px; padding: 0; border-radius: 50%; flex-shrink: 0; font-size: 13px; color: var(--muted); background: var(--card2); }
+  .tl-block .chk.done { background: rgba(62,207,142,.15); border-color: var(--green); color: var(--green); }
+  .tl-block .chk.skipped { background: rgba(255,91,110,.12); border-color: var(--red); color: var(--red); }
+  .gap-row { display: flex; align-items: center; gap: 6px; padding: 2px 12px; color: #555c6e; font-size: 11px; }
+  .gap-row::before, .gap-row::after { content: ""; flex: 1; border-top: 1px dashed #2a2f3a; }
+
+  /* ── Editor Overlay ── */
+  .editor-overlay {
+    display: none; position: fixed; inset: 0; z-index: 45;
+    background: var(--bg); overflow-y: auto;
+    padding-bottom: calc(var(--nav-h) + 20px);
+  }
+  body.editing .editor-overlay { display: block; }
+  .editor-wrap { max-width: 760px; margin: 0 auto; padding: 16px 16px 20px; }
+  .plan-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; align-items: center; }
+  .day-chips { display: flex; gap: 5px; flex-wrap: wrap; margin: 8px 0 14px; }
+  .day-chip { padding: 5px 11px; border-radius: 99px; border: 1px solid var(--border); background: var(--card); font-size: 13px; cursor: pointer; user-select: none; }
+  .day-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .edit-block {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px; margin-bottom: 6px;
+    display: grid; grid-template-columns: auto auto 1fr auto auto; gap: 6px; align-items: center;
+  }
+  .edit-block input[type=time] { width: 98px; font-variant-numeric: tabular-nums; }
+  .edit-block .row2 { grid-column: 1/-1; display: flex; gap: 6px; align-items: center; }
+  .edit-block .row2 input[type=text] { flex: 1; font-size: 13px; color: var(--muted); }
+  .edit-block input[type=color] { width: 32px; height: 32px; padding: 2px; border-radius: 7px; cursor: pointer; }
+  .edit-block .del, .edit-block .dup { padding: 6px 8px; }
+  .add-form {
+    background: var(--card2); border: 1px dashed var(--border); border-radius: 10px;
+    padding: 12px; margin-top: 12px; display: flex; flex-wrap: wrap; gap: 7px; align-items: center;
+  }
+  .add-form input[type=time] { width: 98px; }
+  .add-form input[type=text] { flex: 1; min-width: 150px; }
+  .footer-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+
+  /* ── Habits Tab ── */
+  .habits-progress {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 16px;
+  }
+  .ring-svg { width: 72px; height: 72px; flex-shrink: 0; }
+  .ring-track { fill: none; stroke: #262b36; stroke-width: 8; }
+  .ring-fill { fill: none; stroke: var(--green); stroke-width: 8; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset .5s ease; }
+  .habits-progress-text .big { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .habits-progress-text .sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  .habits-list { display: flex; flex-direction: column; gap: 8px; }
+  .habit-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; transition: border-color .2s; }
+  .habit-card.done-today { border-color: rgba(62,207,142,.35); }
+  .habit-card.not-today { opacity: .55; }
+  .habit-top { display: flex; align-items: center; gap: 10px; }
+  .habit-chk { width: 34px; height: 34px; padding: 0; border-radius: 50%; flex-shrink: 0; font-size: 16px; background: var(--card2); transition: background .15s, border-color .15s; }
+  .habit-chk.done { background: rgba(62,207,142,.18); border-color: var(--green); color: var(--green); }
+  .habit-emoji { font-size: 22px; flex-shrink: 0; line-height: 1; }
+  .habit-name { font-weight: 600; font-size: 15px; flex: 1; }
+  .habit-streak { display: flex; align-items: center; gap: 3px; color: var(--amber); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .habit-edit { background: transparent; border: none; color: var(--muted); padding: 4px 6px; font-size: 14px; cursor: pointer; border-radius: 6px; }
+  .habit-edit:hover { color: var(--text); background: var(--card2); border-color: transparent; }
+  .habit-heatmap { display: grid; grid-template-columns: repeat(28, 1fr); gap: 2px; margin-top: 10px; }
+  .hm-cell { border-radius: 2px; aspect-ratio: 1; }
+
+  .add-habit-btn {
+    width: 100%; padding: 13px; border-radius: 12px; border: 1px dashed var(--border);
+    background: transparent; font-size: 14px; color: var(--muted); margin-top: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .add-habit-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Habit Editor Modal (Bottom Sheet) ── */
+  .habit-editor { display: none; position: fixed; inset: 0; z-index: 48; background: rgba(0,0,0,.65); align-items: flex-end; justify-content: center; }
+  .habit-editor.show { display: flex; }
+  .habit-editor-inner { background: var(--card); border-radius: 20px 20px 0 0; padding: 20px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
+  .he-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+  .he-label { font-size: 12px; color: var(--muted); margin-bottom: 5px; display: block; }
+  .he-row { margin-bottom: 12px; }
+  .he-row input[type=text] { width: 100%; }
+  .emoji-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .emoji-btn { width: 40px; height: 40px; border-radius: 8px; font-size: 20px; padding: 0; background: var(--card2); }
+  .emoji-btn.sel { border-color: var(--accent); background: rgba(91,140,255,.15); }
+  .he-days { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+  .he-day { padding: 5px 10px; border-radius: 99px; border: 1px solid var(--border); font-size: 12px; cursor: pointer; background: var(--card2); user-select: none; }
+  .he-day.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .he-btns { display: flex; gap: 8px; margin-top: 16px; }
+  .he-btns button { flex: 1; padding: 11px; }
+
+  /* ── Stats Tab ── */
+  .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 14px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 11px; padding: 12px 14px; }
+  .stat-card .v { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat-card .l { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .chart-card h3 { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .chart-card svg { width: 100%; height: auto; display: block; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .legend span::before { content: "●"; margin-right: 4px; }
+  .legend .lg-mood::before { color: var(--accent); }
+  .legend .lg-energy::before { color: var(--accent2); }
+  .legend .lg-adh::before { color: var(--green); }
+  .log-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+  .log-row { background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 9px 12px; display: flex; gap: 12px; align-items: baseline; font-size: 13px; flex-wrap: wrap; }
+  .log-row .d { color: var(--muted); font-size: 12px; width: 100px; font-variant-numeric: tabular-nums; }
+  .log-row .m { color: var(--accent); }
+  .log-row .e { color: var(--accent2); }
+  .log-row .n { color: var(--muted); font-size: 12px; flex: 1; }
+
+  .habit-stat-row { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 7px; }
+  .hsr-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .hsr-name { font-size: 14px; font-weight: 600; }
+  .hsr-meta { font-size: 12px; color: var(--muted); }
+  .hsr-heatmap { display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; }
+  .hsr-cell { border-radius: 3px; aspect-ratio: 1; }
+
+  /* ── Focus Overlay ── */
+  .focus-overlay {
+    position: fixed; inset: 0; z-index: 50; background: var(--bg);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 32px; gap: 6px;
+  }
+  .focus-overlay.show { display: flex; }
+  .f-clock { font-size: clamp(56px, 12vw, 120px); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .f-label { font-size: 12px; text-transform: uppercase; letter-spacing: 3px; color: var(--accent); font-weight: 700; margin-top: 16px; }
+  .f-title { font-size: clamp(24px, 5vw, 48px); font-weight: 700; max-width: 700px; word-break: break-word; }
+  .f-rem { color: var(--muted); font-size: 16px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .f-prog { width: min(440px, 80vw); margin-top: 16px; }
+  .f-next { color: var(--muted); font-size: 14px; margin-top: 20px; }
+  .f-exit { position: absolute; top: 16px; right: 16px; background: transparent; color: var(--muted); border-color: transparent; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: calc(var(--nav-h) + 12px); left: 50%; transform: translateX(-50%);
+    background: var(--card2); border: 1px solid var(--accent); border-radius: 10px;
+    padding: 9px 16px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .3s;
+    z-index: 60; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 520px) {
+    .clock-big { font-size: 52px; }
+    .tl-block .times { width: 78px; }
+    .habit-heatmap { gap: 1.5px; }
+    .home-cards { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body data-tab="home">
+
+<!-- ══ BOTTOM NAV ══ -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nb-home"   onclick="setTab('home')">  <span class="ni">🏠</span>Home</button>
+  <button class="nav-btn"        id="nb-plan"   onclick="setTab('plan')">  <span class="ni">📋</span>Tagesplan</button>
+  <button class="nav-btn"        id="nb-habits" onclick="setTab('habits')"><span class="ni">✅</span>Habits</button>
+  <button class="nav-btn"        id="nb-stats"  onclick="setTab('stats')"> <span class="ni">📊</span>Statistik</button>
+</nav>
+
+<!-- ══ HOME TAB ══ -->
+<div class="tab-view t-home">
+  <div class="app-clock">
+    <div class="clock-big" id="clock-home">--:--</div>
+    <div class="clock-date" id="datum-home"></div>
+  </div>
+  <div class="wrap" style="padding-top:4px">
+    <div id="homeNow" class="home-now" style="display:none">
+      <div class="home-now-label" id="homeNowLabel">Jetzt gerade</div>
+      <div class="home-now-title" id="homeNowTitle">–</div>
+      <div class="home-now-rem"   id="homeNowRem"></div>
+    </div>
+    <div class="home-summary" id="homeSummary"></div>
+    <div class="home-cards">
+      <div class="home-feature-card" onclick="setTab('plan')">
+        <div class="hfc-icon">📋</div>
+        <div class="hfc-title">Tagesplan</div>
+        <div class="hfc-sub" id="hfcPlanSub">Plan ansehen</div>
+      </div>
+      <div class="home-feature-card" onclick="setTab('habits')">
+        <div class="hfc-icon">✅</div>
+        <div class="hfc-title">Habits</div>
+        <div class="hfc-sub" id="hfcHabitsSub">Habits checken</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PLAN TAB ══ -->
+<div class="tab-view t-plan">
+  <div class="topbar">
+    <div class="clock-sm" id="clock-plan">--:--</div>
+    <div class="topbar-right">
+      <select id="planSelect" title="Plan wählen"></select>
+      <button id="focusBtn" title="Fokus-Modus">⛶</button>
+      <button id="editBtn">✎ Bearbeiten</button>
+      <button id="notifBtn" class="ghost" title="Benachrichtigungen">🔕</button>
+      <button id="soundBtn" class="ghost" title="Tonsignal">🔇</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="now-card" id="nowCard">
+      <div class="now-label"     id="nowLabel">Jetzt gerade</div>
+      <div class="now-title"     id="nowTitle">–</div>
+      <div class="now-time"      id="nowTime"></div>
+      <div class="now-note"      id="nowNote" style="display:none"></div>
+      <div class="now-remaining" id="nowRemaining"></div>
+      <div class="progress-outer" id="progressOuter">
+        <div class="progress-inner" id="progressInner" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="next-card" id="nextCard" style="display:none">
+      <div>
+        <div class="next-label">Als Nächstes</div>
+        <div class="next-title-text" id="nextTitle"></div>
+      </div>
+      <div class="next-in" id="nextIn"></div>
+    </div>
+    <div class="review-card">
+      <div class="review-head" id="reviewHead">
+        <span>📝 Tagesreview</span>
+        <span class="review-status" id="reviewStatus">offen</span>
+      </div>
+      <div class="review-body" id="reviewBody" style="display:none">
+        <div class="scale-label">Stimmung heute (1 = sehr schlecht · 10 = sehr gut)</div>
+        <div class="scale" id="moodScale"></div>
+        <div class="scale-label">Energie heute</div>
+        <div class="scale energy" id="energyScale"></div>
+        <div class="review-note-row">
+          <input type="text" id="reviewNote" placeholder="Kurze Notiz (optional)">
+          <button class="primary" id="reviewSave">Speichern</button>
+        </div>
+      </div>
+    </div>
+    <div class="section-head">
+      <h2>Heutiger Plan</h2>
+      <span class="adherence" id="adherence"></span>
+    </div>
+    <div id="overlapWarn" class="overlap-warn" style="display:none"></div>
+    <div class="timeline" id="timeline"></div>
+    <div class="hint" style="margin-top:8px">○ → ✓ erledigt → ✕ ausgelassen</div>
+  </div>
+</div>
+
+<!-- ══ HABITS TAB ══ -->
+<div class="tab-view t-habits">
+  <div class="topbar">
+    <div class="clock-sm" id="clock-habits">--:--</div>
+    <div class="topbar-right">
+      <button id="addHabitTopBtn">+ Habit</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="habits-progress">
+      <svg class="ring-svg" viewBox="0 0 72 72">
+        <circle class="ring-track" cx="36" cy="36" r="30"/>
+        <circle class="ring-fill" id="ringFill" cx="36" cy="36" r="30"
+                stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
+      </svg>
+      <div class="habits-progress-text">
+        <div class="big" id="habitsProgressText">0/0</div>
+        <div class="sub" id="habitsProgressSub">Habits heute</div>
+      </div>
+    </div>
+    <div class="habits-list" id="habitsList"></div>
+    <button class="add-habit-btn" id="addHabitBtn">+ Habit hinzufügen</button>
+  </div>
+</div>
+
+<!-- ══ STATS TAB ══ -->
+<div class="tab-view t-stats">
+  <div class="wrap" style="padding-top:18px">
+    <div class="section-head" style="margin-bottom:12px"><h2>Statistik — letzte 14 Tage</h2></div>
+    <div class="stat-cards" id="statCards"></div>
+    <div class="chart-card">
+      <h3>Stimmung &amp; Energie</h3>
+      <div id="chartHost"></div>
+      <div class="legend">
+        <span class="lg-mood">Stimmung</span>
+        <span class="lg-energy">Energie</span>
+        <span class="lg-adh">Plan-Treue</span>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Habit-Erfüllung (letzte 14 Tage)</h3>
+      <div id="habitsStatList"></div>
+    </div>
+    <div class="section-head" style="margin:4px 2px 8px"><h2>Tagesreview-Verlauf</h2></div>
+    <div class="log-list" id="logList"></div>
+    <div class="footer-bar">
+      <button id="exportBtn">Export (JSON)</button>
+      <button id="importBtn">Import</button>
+      <input type="file" id="importFile" accept=".json" style="display:none">
+    </div>
+  </div>
+</div>
+
+<!-- ══ EDITOR OVERLAY ══ -->
+<div class="editor-overlay" id="editorOverlay">
+  <div class="editor-wrap">
+    <div class="section-head" style="margin-top:16px">
+      <h2>Tagesplan bearbeiten</h2>
+      <button id="doneBtn" class="primary">✓ Fertig</button>
+    </div>
+    <div class="plan-tools">
+      <input type="text" id="planName" placeholder="Planname" style="flex:1;min-width:120px">
+      <button id="newPlanBtn">+ Neuer Plan</button>
+      <button id="delPlanBtn" class="danger">Löschen</button>
+    </div>
+    <div class="hint">Aktiv an Wochentagen:</div>
+    <div class="day-chips" id="dayChips"></div>
+    <div class="section-head"><h2>Blöcke</h2></div>
+    <div id="editList"></div>
+    <div class="add-form">
+      <input type="time" id="addStart" step="60">
+      <span style="color:var(--muted)">–</span>
+      <input type="time" id="addEnd" step="60">
+      <input type="text" id="addTitle" placeholder="Titel (Enter zum Hinzufügen)">
+      <button class="primary" id="addBtn">+</button>
+    </div>
+    <div class="hint">Minutengenau — z.B. 06:43 oder 22:30–07:00 über Mitternacht. ⧉ dupliziert.</div>
+  </div>
+</div>
+
+<!-- ══ HABIT EDITOR MODAL ══ -->
+<div class="habit-editor" id="habitEditor">
+  <div class="habit-editor-inner">
+    <div class="he-title" id="heTitle">Habit hinzufügen</div>
+    <div class="he-row">
+      <label class="he-label">Name</label>
+      <input type="text" id="heName" placeholder="z.B. Meditation">
+    </div>
+    <div class="he-row">
+      <label class="he-label">Emoji</label>
+      <div class="emoji-grid" id="emojiGrid"></div>
+    </div>
+    <div class="he-row">
+      <label class="he-label">Farbe</label>
+      <input type="color" id="heColor" value="#5b8cff" style="width:44px;height:36px;padding:2px;border-radius:8px;cursor:pointer">
+    </div>
+    <div class="he-row">
+      <label class="he-label">An welchen Tagen?</label>
+      <div class="he-days" id="heDays"></div>
+    </div>
+    <div class="he-btns">
+      <button id="heSave" class="primary">Speichern</button>
+      <button id="heDelete" class="danger" style="display:none">Löschen</button>
+      <button id="heCancel">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FOCUS OVERLAY ══ -->
+<div class="focus-overlay" id="focusOverlay">
+  <button class="f-exit" id="focusExit">✕ (Esc)</button>
+  <div class="f-clock" id="fClock">--:--</div>
+  <div class="f-label"  id="fLabel"></div>
+  <div class="f-title"  id="fTitle"></div>
+  <div class="f-rem"    id="fRem"></div>
+  <div class="progress-outer f-prog" id="fProgOuter">
+    <div class="progress-inner" id="fProgress" style="width:0%"></div>
+  </div>
+  <div class="f-next" id="fNext"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+<script>
+(function () {
+  "use strict";
+
+  const LS_KEY   = "tagesplan.v1";
+  const DAYS_S   = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+  const DAY_ORD  = [1,2,3,4,5,6,0];
+  const DEF_CLR  = "#5b8cff";
+  const EMOJIS   = ["🧘","📚","💪","🏃","🚴","🥗","💧","😴","✍️","🎯","🧠","🌅","🛁","🎨","🎸","🤝","💊","🥦","🌿","📖","🏋️","⚡","🎵","🙏","🏊","🌞","☕","🫁","💬","🔥"];
+
+  /* ─── State ─── */
+  let state = load();
+  let curPlanId       = autoSelectPlan();
+  let lastActiveId    = null;
+  let notifyEnabled   = false;
+  let reviewMood      = null;
+  let reviewEnergy    = null;
+  let editingHabitId  = null;
+  let heEmoji         = "🧘";
+  let heDays          = [];
+
+  function load() {
+    let s = null;
+    try { const r = localStorage.getItem(LS_KEY); if (r) s = JSON.parse(r); } catch(e) {}
+    if (!s || !Array.isArray(s.plans) || !s.plans.length) {
+      s = {
+        plans: [{
+          id: uid(), name: "Standard", days: [1,2,3,4,5],
+          blocks: [
+            {id:uid(),start:"07:00",end:"07:30",title:"Aufstehen & Licht tanken",note:"",color:"#ffb74d"},
+            {id:uid(),start:"07:30",end:"08:00",title:"Frühstück",note:"",color:"#3ecf8e"},
+            {id:uid(),start:"08:00",end:"12:00",title:"Arbeit – Block 1",note:"",color:"#5b8cff"},
+            {id:uid(),start:"12:00",end:"13:00",title:"Mittagessen + Spaziergang",note:"",color:"#3ecf8e"},
+            {id:uid(),start:"13:00",end:"17:30",title:"Arbeit – Block 2",note:"",color:"#5b8cff"},
+            {id:uid(),start:"17:30",end:"18:15",title:"Bewegung / Sport",note:"",color:"#7c5bff"},
+            {id:uid(),start:"18:15",end:"19:00",title:"Abendessen",note:"",color:"#3ecf8e"},
+            {id:uid(),start:"21:45",end:"22:00",title:"Tagesreview",note:"Stimmung & Energie in der App",color:"#ffb74d"},
+            {id:uid(),start:"22:30",end:"07:00",title:"Schlafen",note:"",color:"#465064"}
+          ]
+        }]
+      };
+    }
+    if (!s.log)      s.log      = {};
+    if (!s.settings) s.settings = { sound: false };
+    // ── Habit migration ──
+    if (!s.habits) s.habits = [
+      {id:uid(),name:"Meditation",emoji:"🧘",color:"#7c5bff",days:[0,1,2,3,4,5,6]},
+      {id:uid(),name:"Bewegung",  emoji:"💪",color:"#3ecf8e",days:[0,1,2,3,4,5,6]},
+      {id:uid(),name:"Lesen",     emoji:"📚",color:"#5b8cff",days:[0,1,2,3,4,5,6]}
+    ];
+    if (!s.habitLog) s.habitLog = {};
+    return s;
+  }
+  function save() { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+  function uid()  { return Math.random().toString(36).slice(2,10); }
+
+  /* ─── Helpers ─── */
+  function plan()   { return state.plans.find(p => p.id === curPlanId) || state.plans[0]; }
+  function toMin(t) { const [h,m] = t.split(":").map(Number); return h*60+m; }
+  function fmtDur(min) {
+    min = Math.max(0, Math.round(min));
+    const h = Math.floor(min/60), m = min%60;
+    if (h && m) return h+" Std "+m+" Min";
+    if (h) return h+" Std";
+    return m+" Min";
+  }
+  function blockDur(b)   { let d = toMin(b.end)-toMin(b.start); if(d<=0)d+=1440; return d; }
+  function sortedBlocks(){ return [...plan().blocks].sort((a,b)=>toMin(a.start)-toMin(b.start)); }
+  function isActive(b, nowMin) {
+    const s=toMin(b.start), e=toMin(b.end);
+    if(s===e) return false;
+    if(s<e)   return nowMin>=s && nowMin<e;
+    return nowMin>=s || nowMin<e;
+  }
+  function autoSelectPlan() {
+    const d = new Date().getDay();
+    return (state.plans.find(p=>(p.days||[]).includes(d)) || state.plans[0]).id;
+  }
+  function dayKey(d) {
+    d = d||new Date();
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+  function todayLog(create) {
+    const k = dayKey();
+    if (!state.log[k] && create) state.log[k] = {};
+    return state.log[k] || null;
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c=>({'&':"&amp;",'<':"&lt;",'>':"&gt;",'"':"&quot;",'\'': "&#39;"}[c]));
+  }
+  function toast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove("show"), 2200);
+  }
+
+  /* ─── Tab navigation ─── */
+  function setTab(tab) {
+    document.body.dataset.tab = tab;
+    document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+    const nb = document.getElementById("nb-"+tab);
+    if (nb) nb.classList.add("active");
+    if (tab==="plan")   { renderPlanSelect(); renderTimeline(); renderReview(); }
+    if (tab==="habits") renderHabits();
+    if (tab==="stats")  renderStats();
+    if (tab==="home")   renderHome();
+  }
+  window.setTab = setTab;
+
+  /* ─── Clock / tick ─── */
+  function tick() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,"0");
+    const mm = String(now.getMinutes()).padStart(2,"0");
+    const ss = String(now.getSeconds()).padStart(2,"0");
+    document.getElementById("clock-home").textContent   = hh+":"+mm;
+    document.getElementById("clock-plan").innerHTML     = hh+":"+mm+"<small>:"+ss+"</small>";
+    document.getElementById("clock-habits").innerHTML   = hh+":"+mm+"<small>:"+ss+"</small>";
+    document.getElementById("datum-home").textContent   = now.toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+
+    const c = computeNow(now);
+    updateNowCard(c);
+    updateHomeNow(c);
+    if (document.getElementById("focusOverlay").classList.contains("show")) renderFocus(now,hh,mm);
+  }
+
+  function computeNow(now) {
+    const nowMin = now.getHours()*60 + now.getMinutes() + now.getSeconds()/60;
+    const blocks = sortedBlocks();
+    const active = blocks.find(b=>isActive(b,nowMin)) || null;
+    let next=null, minutesToNext=null;
+    if (blocks.length) {
+      const after = blocks.filter(b=>toMin(b.start)>nowMin).sort((a,b)=>toMin(a.start)-toMin(b.start))[0];
+      next = after || blocks[0];
+      minutesToNext = toMin(next.start)-nowMin;
+      if(minutesToNext<=0) minutesToNext+=1440;
+      if(active && next.id===active.id) next=null;
+    }
+    let remaining=null, pct=0;
+    if (active) {
+      let elapsed = nowMin-toMin(active.start);
+      if(elapsed<0) elapsed+=1440;
+      const dur = blockDur(active);
+      remaining = dur-elapsed;
+      pct = Math.min(100,(elapsed/dur)*100);
+    }
+    return {nowMin, blocks, active, next, minutesToNext, remaining, pct};
+  }
+
+  function updateNowCard(c) {
+    const tab = document.body.dataset.tab;
+    if (tab !== "plan") {
+      // Still track active block for title & notifications
+      if (c.active && lastActiveId !== null && lastActiveId !== c.active.id) {
+        if (notifyEnabled) notify("Neuer Block: "+c.active.title, c.active.start+" – "+c.active.end);
+        if (state.settings.sound) chime();
+      }
+      if (c.active) { lastActiveId = c.active.id; document.title = "▶ "+c.active.title; }
+      else          { lastActiveId = null; document.title = "Tagesplan"; }
+    }
+    if (tab !== "plan") return;
+
+    const card = document.getElementById("nowCard");
+    if (c.active) {
+      card.classList.remove("free");
+      document.getElementById("nowLabel").textContent = "Jetzt gerade";
+      document.getElementById("nowTitle").textContent = c.active.title;
+      document.getElementById("nowTime").textContent  = c.active.start+" – "+c.active.end+" Uhr  ·  "+fmtDur(blockDur(c.active));
+      const nn = document.getElementById("nowNote");
+      if (c.active.note) { nn.style.display="block"; nn.textContent=c.active.note; } else nn.style.display="none";
+      document.getElementById("nowRemaining").innerHTML = "Noch <b>"+fmtDur(c.remaining)+"</b> in diesem Block";
+      document.getElementById("progressOuter").style.display = "block";
+      document.getElementById("progressInner").style.width   = c.pct.toFixed(2)+"%";
+      if (lastActiveId !== null && lastActiveId !== c.active.id) {
+        if (notifyEnabled) notify("Neuer Block: "+c.active.title, c.active.start+" – "+c.active.end);
+        if (state.settings.sound) chime();
+      }
+      lastActiveId = c.active.id;
+      document.title = "▶ "+c.active.title;
+    } else {
+      card.classList.add("free");
+      document.getElementById("nowLabel").textContent = "Gerade";
+      document.getElementById("nowTitle").textContent = c.blocks.length ? "Freie Zeit" : "Kein Plan";
+      document.getElementById("nowTime").textContent  = "";
+      document.getElementById("nowNote").style.display = "none";
+      document.getElementById("nowRemaining").innerHTML = c.next ? "Nächster Block in <b>"+fmtDur(c.minutesToNext)+"</b>" : "";
+      document.getElementById("progressOuter").style.display = "none";
+      lastActiveId = null; document.title = "Tagesplan";
+    }
+    const nc = document.getElementById("nextCard");
+    if (c.next) {
+      nc.style.display = "flex";
+      document.getElementById("nextTitle").textContent = c.next.start+" Uhr · "+c.next.title;
+      document.getElementById("nextIn").textContent    = "in "+fmtDur(c.minutesToNext);
+    } else nc.style.display="none";
+
+    document.querySelectorAll("#timeline .tl-block").forEach(el=>{
+      const b = c.blocks.find(x=>x.id===el.dataset.id);
+      if(!b) return;
+      el.classList.toggle("active", isActive(b,c.nowMin));
+      const cm = toMin(b.end)<=toMin(b.start);
+      el.classList.toggle("past", !isActive(b,c.nowMin) && !cm && toMin(b.end)<=c.nowMin);
+    });
+  }
+
+  function updateHomeNow(c) {
+    if (document.body.dataset.tab !== "home") return;
+    const el = document.getElementById("homeNow");
+    const label = document.getElementById("homeNowLabel");
+    const title = document.getElementById("homeNowTitle");
+    const rem   = document.getElementById("homeNowRem");
+    if (c.active) {
+      el.style.display = "block"; label.textContent = "Jetzt gerade";
+      title.textContent = c.active.title;
+      rem.textContent   = "Noch "+fmtDur(c.remaining)+" · bis "+c.active.end+" Uhr";
+    } else if (c.next) {
+      el.style.display = "block"; label.textContent = "Gerade";
+      title.textContent = "Freie Zeit";
+      rem.textContent   = "Als Nächstes: "+c.next.title+" (in "+fmtDur(c.minutesToNext)+")";
+    } else {
+      el.style.display = "none";
+    }
+  }
+
+  function renderFocus(now,hh,mm) {
+    const c = computeNow(now);
+    document.getElementById("fClock").textContent = hh+":"+mm;
+    if (c.active) {
+      document.getElementById("fLabel").textContent = "Jetzt gerade";
+      document.getElementById("fTitle").textContent = c.active.title;
+      document.getElementById("fRem").textContent   = "noch "+fmtDur(c.remaining)+"  ·  bis "+c.active.end+" Uhr";
+      document.getElementById("fProgOuter").style.visibility = "visible";
+      document.getElementById("fProgress").style.width = c.pct.toFixed(2)+"%";
+    } else {
+      document.getElementById("fLabel").textContent = "Gerade";
+      document.getElementById("fTitle").textContent = "Freie Zeit";
+      document.getElementById("fRem").textContent   = "";
+      document.getElementById("fProgOuter").style.visibility = "hidden";
+    }
+    document.getElementById("fNext").textContent = c.next
+      ? "Als Nächstes: "+c.next.start+" Uhr · "+c.next.title+" (in "+fmtDur(c.minutesToNext)+")" : "";
+  }
+
+  /* ─── Home ─── */
+  function renderHome() {
+    const log  = todayLog(false);
+    let planDone=0, planTotal=0;
+    if (log && log.done) {
+      const vals = Object.values(log.done);
+      planDone  = vals.filter(v=>v==="done").length;
+      planTotal = vals.length;
+    }
+    const todayDay     = new Date().getDay();
+    const todayHabits  = state.habits.filter(h=>h.days.includes(todayDay));
+    const k            = dayKey();
+    const hDone        = todayHabits.filter(h=>!!(state.habitLog[k]&&state.habitLog[k][h.id])).length;
+    const hTotal       = todayHabits.length;
+
+    document.getElementById("homeSummary").innerHTML =
+      '<div class="summary-card"><div class="sv">'+hDone+"/"+hTotal+'</div><div class="sl">Habits heute</div></div>'+
+      '<div class="summary-card"><div class="sv">'+(planTotal ? planDone+"/"+planTotal : "–")+'</div><div class="sl">Plan-Blöcke erledigt</div></div>';
+    document.getElementById("hfcHabitsSub").textContent = hTotal ? hDone+"/"+hTotal+" heute" : "Habits einrichten";
+    document.getElementById("hfcPlanSub").textContent   = planTotal ? planDone+"/"+planTotal+" erledigt" : "Plan ansehen";
+  }
+
+  /* ─── Plan Tab ─── */
+  function renderPlanSelect() {
+    const sel = document.getElementById("planSelect");
+    sel.innerHTML = "";
+    state.plans.forEach(p=>{
+      const o = document.createElement("option");
+      o.value=p.id; o.textContent=p.name; sel.appendChild(o);
+    });
+    sel.value = curPlanId;
+  }
+
+  function renderTimeline() {
+    const blocks = sortedBlocks();
+    const tl     = document.getElementById("timeline");
+    tl.innerHTML = "";
+    if (!blocks.length) {
+      tl.innerHTML = '<div class="empty-state"><div class="big">🗓️</div>Noch keine Blöcke.<br>Klicke auf „✎ Bearbeiten".</div>';
+      document.getElementById("overlapWarn").style.display = "none";
+      renderAdherence(); return;
+    }
+    let prevEnd = null;
+    blocks.forEach(b=>{
+      if (prevEnd !== null) {
+        const gap = toMin(b.start)-prevEnd;
+        if (gap>0) { const g=document.createElement("div"); g.className="gap-row"; g.textContent=fmtDur(gap)+" frei"; tl.appendChild(g); }
+      }
+      const mark = blockMark(b.id);
+      const el = document.createElement("div");
+      el.className = "tl-block"+(mark==="done"?" checked-done":"");
+      el.dataset.id = b.id;
+      el.innerHTML =
+        '<span class="dot" style="background:'+(b.color||DEF_CLR)+'"></span>'+
+        '<span class="times">'+b.start+"–"+b.end+"</span>"+
+        '<span class="b-title">'+esc(b.title)+(b.note?'<div class="b-note">'+esc(b.note)+"</div>":"")+"</span>"+
+        '<span class="b-dur">'+fmtDur(blockDur(b))+"</span>";
+      const chk = document.createElement("button");
+      chk.className = "chk"+(mark?" "+mark:"");
+      chk.textContent = mark==="done"?"✓":mark==="skipped"?"✕":"○";
+      chk.onclick = ()=>cycleMark(b.id);
+      el.appendChild(chk);
+      tl.appendChild(el);
+      prevEnd = toMin(b.end)<=toMin(b.start) ? null : toMin(b.end);
+    });
+    renderOverlapWarning(blocks); renderAdherence();
+  }
+
+  function renderOverlapWarning(blocks) {
+    const w=document.getElementById("overlapWarn"); const ol=[];
+    for(let i=0;i<blocks.length-1;i++){const a=blocks[i],b=blocks[i+1];if(toMin(a.end)>toMin(a.start)&&toMin(a.end)>toMin(b.start))ol.push(a.title+" ↔ "+b.title);}
+    if(ol.length){w.style.display="block";w.textContent="⚠ Überschneidung: "+ol.join(", ");}else w.style.display="none";
+  }
+
+  function blockMark(id) { const l=todayLog(false); return (l&&l.done&&l.done[id])||null; }
+  function cycleMark(id) {
+    const l=todayLog(true); if(!l.done)l.done={};
+    const c=l.done[id]||null;
+    if(c===null)l.done[id]="done"; else if(c==="done")l.done[id]="skipped"; else delete l.done[id];
+    save(); renderTimeline();
+  }
+  function renderAdherence() {
+    const l=todayLog(false); const el=document.getElementById("adherence");
+    if(!l||!l.done||!Object.keys(l.done).length){el.innerHTML="";return;}
+    const vals=Object.values(l.done);
+    const d=vals.filter(v=>v==="done").length, s=vals.filter(v=>v==="skipped").length;
+    el.innerHTML='Heute: <span class="ok">'+d+' ✓</span>'+(s?' · <span class="no">'+s+' ✕</span>':"");
+  }
+
+  /* ─── Review ─── */
+  function mkScale(id, cur, cb) {
+    const c=document.getElementById(id); c.innerHTML="";
+    for(let i=1;i<=10;i++){const b=document.createElement("button");b.textContent=i;if(cur===i)b.classList.add("sel");b.onclick=()=>cb(i);c.appendChild(b);}
+  }
+  function refreshScales() {
+    mkScale("moodScale",   reviewMood,    v=>{reviewMood=v;    refreshScales();});
+    mkScale("energyScale", reviewEnergy,  v=>{reviewEnergy=v;  refreshScales();});
+  }
+  function renderReview() {
+    const log = todayLog(false);
+    const has = log && typeof log.mood === "number";
+    if (has) { reviewMood=log.mood; reviewEnergy=typeof log.energy==="number"?log.energy:reviewEnergy; }
+    const st = document.getElementById("reviewStatus");
+    if (has) { st.textContent="Stimmung "+log.mood+(typeof log.energy==="number"?" · Energie "+log.energy:"")+" ✓"; st.classList.add("done"); }
+    else      { st.textContent="offen"; st.classList.remove("done"); }
+    refreshScales();
+    document.getElementById("reviewNote").value = (log&&log.note)||"";
+  }
+
+  /* ─── Habits ─── */
+  function getStreak(habit) {
+    const today   = new Date();
+    const todayK  = dayKey(today);
+    const todayDue  = habit.days.includes(today.getDay());
+    const todayDone = todayDue && !!(state.habitLog[todayK]&&state.habitLog[todayK][habit.id]);
+    let streak = 0;
+    const d = new Date(today);
+    if (!todayDone) d.setDate(d.getDate()-1);
+    for (let i=0; i<365; i++) {
+      const dk = dayKey(d);
+      if (habit.days.includes(d.getDay())) {
+        if (state.habitLog[dk]&&state.habitLog[dk][habit.id]) streak++;
+        else break;
+      }
+      d.setDate(d.getDate()-1);
+    }
+    return streak;
+  }
+
+  function toggleHabit(id) {
+    const k = dayKey();
+    if (!state.habitLog[k]) state.habitLog[k] = {};
+    if (state.habitLog[k][id]) delete state.habitLog[k][id];
+    else state.habitLog[k][id] = true;
+    if (!Object.keys(state.habitLog[k]).length) delete state.habitLog[k];
+    save(); renderHabits();
+  }
+
+  function renderHabits() {
+    const todayDay   = new Date().getDay();
+    const todayH     = state.habits.filter(h=>h.days.includes(todayDay));
+    const notTodayH  = state.habits.filter(h=>!h.days.includes(todayDay));
+    const k          = dayKey();
+    const done       = todayH.filter(h=>!!(state.habitLog[k]&&state.habitLog[k][h.id])).length;
+    const total      = todayH.length;
+
+    // Ring
+    const pct    = total>0 ? done/total : 0;
+    const circ   = 188.5;
+    document.getElementById("ringFill").style.strokeDashoffset = (circ*(1-pct)).toFixed(2);
+    document.getElementById("habitsProgressText").textContent  = done+"/"+total;
+    document.getElementById("habitsProgressSub").textContent   = (pct===1&&total>0) ? "Alle erledigt! 🎉" : "Habits heute";
+
+    const list = document.getElementById("habitsList");
+    list.innerHTML = "";
+
+    // Undone first, then done
+    const sorted = [...todayH].sort((a,b)=>{
+      const ad=!!(state.habitLog[k]&&state.habitLog[k][a.id]);
+      const bd=!!(state.habitLog[k]&&state.habitLog[k][b.id]);
+      return ad-bd;
+    });
+
+    if (!state.habits.length) {
+      list.innerHTML = '<div class="empty-state"><div class="big">✅</div>Noch keine Habits.<br>Füge deinen ersten Habit hinzu.</div>';
+    } else {
+      sorted.forEach(h=>list.appendChild(buildHabitCard(h,true)));
+      if (notTodayH.length) {
+        const lbl = document.createElement("div");
+        lbl.className="hint"; lbl.style.margin="14px 2px 6px"; lbl.textContent="Heute nicht geplant:";
+        list.appendChild(lbl);
+        notTodayH.forEach(h=>list.appendChild(buildHabitCard(h,false)));
+      }
+    }
+  }
+
+  function buildHabitCard(h, forToday) {
+    const k     = dayKey();
+    const done  = !!(state.habitLog[k]&&state.habitLog[k][h.id]);
+    const streak = getStreak(h);
+
+    const card = document.createElement("div");
+    card.className = "habit-card"+(done?" done-today":"")+(forToday?"":" not-today");
+
+    // Top row
+    const top = document.createElement("div"); top.className="habit-top";
+
+    const chk = document.createElement("button");
+    chk.className = "habit-chk"+(done?" done":"");
+    chk.textContent = done?"✓":"○";
+    if (done) chk.style.borderColor = h.color||DEF_CLR;
+    if (forToday) chk.onclick = ()=>toggleHabit(h.id);
+    else { chk.disabled=true; chk.style.cursor="default"; }
+
+    const emoji = document.createElement("span"); emoji.className="habit-emoji"; emoji.textContent=h.emoji||"✅";
+    const name  = document.createElement("span"); name.className="habit-name";   name.textContent=h.name;
+
+    const streakEl = document.createElement("span"); streakEl.className="habit-streak";
+    if (streak>0) streakEl.innerHTML="🔥 "+streak;
+
+    const editBtn = document.createElement("button");
+    editBtn.className="habit-edit"; editBtn.textContent="✎"; editBtn.title="Bearbeiten";
+    editBtn.onclick = e=>{ e.stopPropagation(); openHabitEditor(h.id); };
+
+    top.appendChild(chk); top.appendChild(emoji); top.appendChild(name);
+    top.appendChild(streakEl); top.appendChild(editBtn);
+    card.appendChild(top);
+
+    // 28-day heatmap
+    const hm = document.createElement("div"); hm.className="habit-heatmap";
+    for (let i=27; i>=0; i--) {
+      const d=new Date(); d.setDate(d.getDate()-i);
+      const dk=dayKey(d);
+      const scheduled = h.days.includes(d.getDay());
+      const wasDone   = !!(state.habitLog[dk]&&state.habitLog[dk][h.id]);
+      const cell = document.createElement("div"); cell.className="hm-cell";
+      cell.title = dk+(scheduled?(wasDone?" ✓":" ✕"):" –");
+      if (!scheduled)   cell.style.background="transparent";
+      else if (wasDone) cell.style.background=h.color||DEF_CLR;
+      else              cell.style.background="#262b36";
+      hm.appendChild(cell);
+    }
+    card.appendChild(hm);
+    return card;
+  }
+
+  /* ─── Habit Editor ─── */
+  function buildEmojiGrid() {
+    const g=document.getElementById("emojiGrid"); g.innerHTML="";
+    EMOJIS.forEach(e=>{
+      const b=document.createElement("button"); b.className="emoji-btn"+(e===heEmoji?" sel":"");
+      b.textContent=e; b.onclick=()=>{heEmoji=e;buildEmojiGrid();};
+      g.appendChild(b);
+    });
+  }
+
+  function buildHeDaysUI() {
+    const c=document.getElementById("heDays"); c.innerHTML="";
+    DAY_ORD.forEach(d=>{
+      const btn=document.createElement("button");
+      btn.className="he-day"+(heDays.includes(d)?" on":"");
+      btn.textContent=DAYS_S[d];
+      btn.onclick=()=>{
+        if(heDays.includes(d)) heDays.splice(heDays.indexOf(d),1); else heDays.push(d);
+        btn.classList.toggle("on",heDays.includes(d));
+      };
+      c.appendChild(btn);
+    });
+  }
+
+  function openHabitEditor(id) {
+    editingHabitId = id||null;
+    const h = id ? state.habits.find(x=>x.id===id) : null;
+    document.getElementById("heTitle").textContent = h?"Habit bearbeiten":"Habit hinzufügen";
+    document.getElementById("heName").value  = h?h.name:"";
+    document.getElementById("heColor").value = h?h.color:DEF_CLR;
+    heEmoji = h ? h.emoji : "🧘";
+    heDays  = h ? [...h.days] : [0,1,2,3,4,5,6];
+    buildEmojiGrid();
+    buildHeDaysUI();
+    document.getElementById("heDelete").style.display = h?"block":"none";
+    document.getElementById("habitEditor").classList.add("show");
+    setTimeout(()=>document.getElementById("heName").focus(),100);
+  }
+  function closeHabitEditor() { document.getElementById("habitEditor").classList.remove("show"); }
+
+  /* ─── Stats ─── */
+  function lastNDays(n) {
+    const out=[];
+    for(let i=n-1;i>=0;i--){
+      const d=new Date(); d.setDate(d.getDate()-i);
+      const k=dayKey(d); const log=state.log[k]||null;
+      let adh=null;
+      if(log&&log.done){const v=Object.values(log.done);const dn=v.filter(x=>x==="done").length;if(v.length)adh=dn/v.length;}
+      out.push({
+        key:k, label:String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0")+".",
+        weekday:DAYS_S[d.getDay()], day:d.getDay(),
+        mood: log&&typeof log.mood==="number"?log.mood:null,
+        energy: log&&typeof log.energy==="number"?log.energy:null,
+        note: (log&&log.note)||"", adh
+      });
+    }
+    return out;
+  }
+
+  function renderStats() {
+    const days  = lastNDays(14);
+    const last7 = days.slice(-7);
+    const avg   = arr=>arr.length?(arr.reduce((a,b)=>a+b,0)/arr.length):null;
+    const moods    = last7.map(d=>d.mood).filter(v=>v!==null);
+    const energies = last7.map(d=>d.energy).filter(v=>v!==null);
+    const adhs     = last7.map(d=>d.adh).filter(v=>v!==null);
+    const swing    = moods.length>=2?(Math.max(...moods)-Math.min(...moods)):null;
+    let streak=0;
+    for(let i=days.length-1;i>=0;i--){if(days[i].mood!==null)streak++;else if(i===days.length-1)continue;else break;}
+    let bestStreak=0;
+    state.habits.forEach(h=>{const s=getStreak(h);if(s>bestStreak)bestStreak=s;});
+
+    document.getElementById("statCards").innerHTML=[
+      {v:avg(moods)!==null?avg(moods).toFixed(1):"–",l:"Ø Stimmung (7 Tage)"},
+      {v:avg(energies)!==null?avg(energies).toFixed(1):"–",l:"Ø Energie (7 Tage)"},
+      {v:swing!==null?"±"+swing:"–",l:"Stimmungs-Spannweite"},
+      {v:adhs.length?Math.round(avg(adhs)*100)+"%":"–",l:"Ø Plan-Treue (7 Tage)"},
+      {v:streak,l:"Review-Serie (Tage)"},
+      {v:bestStreak||"–",l:"Längste Habit-Streak"}
+    ].map(c=>'<div class="stat-card"><div class="v">'+c.v+'</div><div class="l">'+c.l+"</div></div>").join("");
+
+    document.getElementById("chartHost").innerHTML = buildMoodChart(days);
+
+    // Habit stats
+    const hsl = document.getElementById("habitsStatList");
+    hsl.innerHTML = "";
+    if (!state.habits.length) {
+      hsl.innerHTML='<div class="empty-state">Noch keine Habits definiert.</div>';
+    } else {
+      state.habits.forEach(h=>{
+        const last14 = days.map(d=>{
+          const scheduled = h.days.includes(new Date(d.key+"T12:00").getDay());
+          const done      = !!(state.habitLog[d.key]&&state.habitLog[d.key][h.id]);
+          return {scheduled,done,label:d.label};
+        });
+        const sched = last14.filter(d=>d.scheduled);
+        const rate  = sched.length ? Math.round(sched.filter(d=>d.done).length/sched.length*100) : 0;
+        const s     = getStreak(h);
+        const row   = document.createElement("div"); row.className="habit-stat-row";
+        row.innerHTML='<div class="hsr-top"><span class="hsr-name">'+esc(h.emoji)+" "+esc(h.name)+'</span><span class="hsr-meta">'+rate+"% · 🔥 "+s+"</span></div>";
+        const grid  = document.createElement("div"); grid.className="hsr-heatmap";
+        last14.forEach(d=>{
+          const cell=document.createElement("div"); cell.className="hsr-cell";
+          cell.title=d.label+(d.scheduled?(d.done?" ✓":" ✕"):" –");
+          if(!d.scheduled) cell.style.background="#1d212b";
+          else if(d.done)  cell.style.background=h.color||DEF_CLR;
+          else             cell.style.background="#262b36";
+          grid.appendChild(cell);
+        });
+        row.appendChild(grid); hsl.appendChild(row);
+      });
+    }
+
+    // Log list
+    const rows=[...days].reverse().filter(d=>d.mood!==null||d.adh!==null);
+    document.getElementById("logList").innerHTML=rows.length
+      ?rows.map(d=>'<div class="log-row"><span class="d">'+d.weekday+" "+d.label+"</span>"+(d.mood!==null?'<span class="m">Stimmung '+d.mood+"</span>":"")+(d.energy!==null?'<span class="e">Energie '+d.energy+"</span>":"")+(d.adh!==null?"<span>"+Math.round(d.adh*100)+"% ✓</span>":"")+(d.note?'<span class="n">'+esc(d.note)+"</span>":"")+"</div>").join("")
+      :'<div class="empty-state">Noch keine Einträge.</div>';
+  }
+
+  function buildMoodChart(days) {
+    const W=700,H=200,pL=30,pR=10,pT=10,pB=22;
+    const iw=W-pL-pR, ih=H-pT-pB;
+    const x=i=>pL+(days.length===1?iw/2:i*(iw/(days.length-1)));
+    const y=v=>pT+ih-((v-1)/9)*ih;
+    let s='<svg viewBox="0 0 '+W+" "+H+'" xmlns="http://www.w3.org/2000/svg">';
+    for(let v=2;v<=10;v+=2){s+='<line x1="'+pL+'" y1="'+y(v)+'" x2="'+(W-pR)+'" y2="'+y(v)+'" stroke="#262b36" stroke-width="1"/><text x="'+(pL-6)+'" y="'+(y(v)+4)+'" fill="#555c6e" font-size="10" text-anchor="end">'+v+"</text>";}
+    const bw=Math.min(18,(iw/days.length)*0.5);
+    days.forEach((d,i)=>{if(d.adh===null)return;const bh=d.adh*ih;s+='<rect x="'+(x(i)-bw/2)+'" y="'+(pT+ih-bh)+'" width="'+bw+'" height="'+bh+'" rx="2" fill="rgba(62,207,142,0.2)"/>';});
+    function ln(key,color,dash){let r="";for(let i=0;i<days.length-1;i++){if(days[i][key]!==null&&days[i+1][key]!==null)r+='<line x1="'+x(i)+'" y1="'+y(days[i][key])+'" x2="'+x(i+1)+'" y2="'+y(days[i+1][key])+'" stroke="'+color+'" stroke-width="2.5"'+(dash?' stroke-dasharray="5 4"':"")+'  stroke-linecap="round"/>';}days.forEach((d,i)=>{if(d[key]!==null)r+='<circle cx="'+x(i)+'" cy="'+y(d[key])+'" r="4" fill="'+color+'"/>';});return r;}
+    s+=ln("energy","#7c5bff",true); s+=ln("mood","#5b8cff",false);
+    days.forEach((d,i)=>{if(i%2===0||i===days.length-1)s+='<text x="'+x(i)+'" y="'+(H-6)+'" fill="#555c6e" font-size="10" text-anchor="middle">'+d.label+"</text>";});
+    s+="</svg>"; return s;
+  }
+
+  /* ─── Audio / Notify ─── */
+  function notify(title,body){if(!("Notification"in window)||Notification.permission!=="granted")return;try{new Notification(title,{body});}catch(e){}}
+  function chime(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();[[660,0],[880,0.18]].forEach(([f,off])=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type="sine";o.frequency.value=f;o.connect(g);g.connect(ctx.destination);const t=ctx.currentTime+off;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.22,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.6);o.start(t);o.stop(t+0.7);});setTimeout(()=>ctx.close(),1200);}catch(e){}}
+
+  /* ─── Editor ─── */
+  function renderEditor() {
+    const p = plan();
+    document.getElementById("planName").value = p.name;
+    const chips = document.getElementById("dayChips"); chips.innerHTML="";
+    DAY_ORD.forEach(d=>{
+      const c=document.createElement("span"); c.className="day-chip"+((p.days||[]).includes(d)?" on":""); c.textContent=DAYS_S[d];
+      c.onclick=()=>{p.days=p.days||[];if(p.days.includes(d))p.days=p.days.filter(x=>x!==d);else p.days.push(d);save();renderEditor();};
+      chips.appendChild(c);
+    });
+    const list=document.getElementById("editList"); list.innerHTML="";
+    sortedBlocks().forEach(b=>{
+      const row=document.createElement("div"); row.className="edit-block";
+      const is=mkInp("time",b.start), ie=mkInp("time",b.end), it=mkInp("text",b.title); it.placeholder="Titel";
+      const dup=document.createElement("button"); dup.className="dup"; dup.textContent="⧉"; dup.title="Duplizieren";
+      const del=document.createElement("button"); del.className="danger del"; del.textContent="✕";
+      const row2=document.createElement("div"); row2.className="row2";
+      const ic=mkInp("color",b.color||DEF_CLR), inote=mkInp("text",b.note||""); inote.placeholder="Notiz";
+      row2.appendChild(ic); row2.appendChild(inote);
+      is.onchange=()=>{if(is.value){b.start=is.value;save();renderEditor();}};
+      ie.onchange=()=>{if(ie.value){b.end=ie.value;save();renderEditor();}};
+      it.oninput=()=>{b.title=it.value;save();};
+      inote.oninput=()=>{b.note=inote.value;save();};
+      ic.oninput=()=>{b.color=ic.value;save();};
+      dup.onclick=()=>{p.blocks.push({id:uid(),start:b.start,end:b.end,title:b.title,note:b.note||"",color:b.color||DEF_CLR});save();renderEditor();toast("Dupliziert ✓");};
+      del.onclick=()=>{p.blocks=p.blocks.filter(x=>x.id!==b.id);save();renderEditor();};
+      row.appendChild(is);row.appendChild(ie);row.appendChild(it);row.appendChild(dup);row.appendChild(del);row.appendChild(row2);
+      list.appendChild(row);
+    });
+    if(!p.blocks.length)list.innerHTML='<div class="hint">Noch keine Blöcke.</div>';
+  }
+  function mkInp(type,val){const i=document.createElement("input");i.type=type;if(type==="time")i.step=60;i.value=val;return i;}
+  function addBlock(){
+    const s=document.getElementById("addStart").value, e=document.getElementById("addEnd").value, t=document.getElementById("addTitle").value.trim();
+    if(!s||!e||!t){toast("Start, Ende und Titel angeben");return;}
+    plan().blocks.push({id:uid(),start:s,end:e,title:t,note:"",color:DEF_CLR});
+    save(); document.getElementById("addStart").value=e; document.getElementById("addEnd").value=""; document.getElementById("addTitle").value="";
+    renderEditor(); document.getElementById("addEnd").focus(); toast("Block hinzugefügt ✓");
+  }
+
+  /* ─── Import / Export ─── */
+  function doExport(){
+    const b=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="tagesplan-export.json"; a.click(); URL.revokeObjectURL(a.href);
+  }
+  function doImport(){
+    const f=document.getElementById("importFile").files[0]; if(!f)return;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{
+        const s=JSON.parse(r.result);
+        if(!s||!Array.isArray(s.plans))throw 0;
+        if(!s.log)s.log={}; if(!s.habits)s.habits=[]; if(!s.habitLog)s.habitLog={}; if(!s.settings)s.settings={sound:false};
+        state=s; curPlanId=autoSelectPlan(); save();
+        renderPlanSelect(); renderTimeline(); renderReview(); renderHabits(); tick(); toast("Import ✓");
+      }catch{toast("Import fehlgeschlagen");}
+    };
+    r.readAsText(f); document.getElementById("importFile").value="";
+  }
+
+  /* ─── Event listeners ─── */
+  // Plan tab
+  document.getElementById("editBtn").onclick  = ()=>{document.body.classList.add("editing");renderEditor();};
+  document.getElementById("doneBtn").onclick  = ()=>{document.body.classList.remove("editing");renderPlanSelect();renderTimeline();renderReview();tick();};
+  document.getElementById("planSelect").onchange = e=>{curPlanId=e.target.value;lastActiveId=null;renderTimeline();tick();};
+  document.getElementById("planName").oninput    = e=>{plan().name=e.target.value||"Plan";save();renderPlanSelect();};
+  document.getElementById("newPlanBtn").onclick  = ()=>{const p={id:uid(),name:"Neuer Plan",days:[],blocks:[]};state.plans.push(p);curPlanId=p.id;save();renderPlanSelect();renderEditor();};
+  document.getElementById("delPlanBtn").onclick  = ()=>{if(state.plans.length<=1){toast("Letzter Plan kann nicht gelöscht werden");return;}if(!confirm('Plan "'+plan().name+'" löschen?'))return;state.plans=state.plans.filter(p=>p.id!==curPlanId);curPlanId=state.plans[0].id;save();renderPlanSelect();renderEditor();};
+  document.getElementById("addBtn").onclick = addBlock;
+  document.getElementById("addTitle").addEventListener("keydown",e=>{if(e.key==="Enter")addBlock();});
+  document.getElementById("exportBtn").onclick = doExport;
+  document.getElementById("importBtn").onclick = ()=>document.getElementById("importFile").click();
+  document.getElementById("importFile").onchange = doImport;
+
+  // Review
+  document.getElementById("reviewHead").onclick = ()=>{const b=document.getElementById("reviewBody");b.style.display=b.style.display==="none"?"block":"none";};
+  document.getElementById("reviewSave").onclick  = ()=>{
+    if(reviewMood===null){toast("Stimmung (1–10) wählen");return;}
+    const l=todayLog(true); l.mood=reviewMood; if(reviewEnergy!==null)l.energy=reviewEnergy;
+    l.note=document.getElementById("reviewNote").value.trim(); save(); renderReview();
+    document.getElementById("reviewBody").style.display="none"; toast("Tagesreview gespeichert ✓");
+  };
+
+  // Sound & Notify
+  document.getElementById("notifBtn").onclick = async ()=>{
+    if(!("Notification"in window)){toast("Nicht unterstützt");return;}
+    if(notifyEnabled){notifyEnabled=false;document.getElementById("notifBtn").textContent="🔕";toast("Benachrichtigungen aus");return;}
+    const p=await Notification.requestPermission();
+    if(p==="granted"){notifyEnabled=true;document.getElementById("notifBtn").textContent="🔔";toast("Benachrichtigungen aktiv");}else toast("Berechtigung abgelehnt");
+  };
+  document.getElementById("soundBtn").onclick = ()=>{
+    state.settings.sound=!state.settings.sound; save();
+    document.getElementById("soundBtn").textContent=state.settings.sound?"🔊":"🔇";
+    if(state.settings.sound){chime();toast("Tonsignal aktiv");}else toast("Tonsignal aus");
+  };
+
+  // Focus
+  function closeFocus(){document.getElementById("focusOverlay").classList.remove("show");if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen().catch(()=>{});}
+  document.getElementById("focusBtn").onclick  = ()=>{document.getElementById("focusOverlay").classList.add("show");if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});tick();};
+  document.getElementById("focusExit").onclick = closeFocus;
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")closeFocus();});
+
+  // Habits
+  document.getElementById("addHabitBtn").onclick    = ()=>openHabitEditor(null);
+  document.getElementById("addHabitTopBtn").onclick = ()=>openHabitEditor(null);
+
+  // Habit editor
+  document.getElementById("heSave").onclick = ()=>{
+    const name=document.getElementById("heName").value.trim();
+    if(!name){toast("Name angeben");return;}
+    if(!heDays.length){toast("Mindestens einen Tag wählen");return;}
+    const color=document.getElementById("heColor").value;
+    if(editingHabitId){
+      const h=state.habits.find(x=>x.id===editingHabitId);
+      if(h){h.name=name;h.emoji=heEmoji;h.color=color;h.days=[...heDays];}
+    } else {
+      state.habits.push({id:uid(),name,emoji:heEmoji,color,days:[...heDays]});
+    }
+    save(); closeHabitEditor(); renderHabits();
+    toast(editingHabitId?"Habit aktualisiert ✓":"Habit hinzugefügt ✓");
+  };
+  document.getElementById("heDelete").onclick = ()=>{
+    if(!editingHabitId)return;
+    if(!confirm("Habit wirklich löschen?"))return;
+    state.habits=state.habits.filter(h=>h.id!==editingHabitId);
+    save(); closeHabitEditor(); renderHabits(); toast("Habit gelöscht");
+  };
+  document.getElementById("heCancel").onclick = closeHabitEditor;
+  document.getElementById("habitEditor").onclick = e=>{if(e.target===document.getElementById("habitEditor"))closeHabitEditor();};
+
+  /* ─── Start ─── */
+  document.getElementById("soundBtn").textContent = state.settings.sound?"🔊":"🔇";
+  renderPlanSelect();
+  renderTimeline();
+  renderReview();
+  renderHabits();
+  renderHome();
+  tick();
+  setInterval(tick, 1000);
+  setInterval(()=>{
+    const tab=document.body.dataset.tab;
+    if(tab==="plan") renderTimeline();
+    if(tab==="home") renderHome();
+  }, 60000);
+})();
+</script>
+</body>
+</html>
